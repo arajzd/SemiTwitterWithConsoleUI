@@ -1,9 +1,9 @@
-
 #include "Tweet.h"
 #include "Tag.h"
 
+
 Tweet::Tweet(const string &TweetId, const string &text, User *involvedUser)
-        : TweetId(TweetId), text(text),
+        : tweetId(TweetId), text(text),
           involvedUser(involvedUser) { numberOfRetweets = 0; }
 
 void Tweet::addTag(Tag *newTag) {
@@ -14,88 +14,29 @@ void Tweet::addMention(User *newMention) {
     mentionedUsers.push_back(newMention);
 }
 
-void Tweet::printTweet() {
-    cout << involvedUser->getDisplayName() << endl;
-    cout << text << endl;
+string Tweet::getTweetContentString() {
+    string tweetContentString;
+    tweetContentString += involvedUser->getDisplayName();
+    tweetContentString += LINE_BREAK;
+    tweetContentString += text;
+    tweetContentString += LINE_BREAK;
     for (int i = 0; i < tags.size(); ++i) {
-        cout << "#" << tags[i]->getText() << endl;
+        tweetContentString += ("#" + tags[i]->getText() + LINE_BREAK);
     }
     for (int j = 0; j < mentionedUsers.size(); ++j) {
-        cout << "@" << mentionedUsers[j]->getUsername() << endl;
+        tweetContentString += ("@" + mentionedUsers[j]->getUsername() + LINE_BREAK);
     }
-    cout << "Likes " << likers.size() << endl;
-    cout << "Rejeeks " << numberOfRetweets << endl;
-    if (!comments.empty()) {
-        cout << "comments:" << endl;
-    }
-    for (int k = 0; k < comments.size(); ++k) {
-        cout << comments[k]->getCommentId() << endl;
-    }
-
+    tweetContentString += "Likes " + to_string(likers.size()) + LINE_BREAK;
+    tweetContentString += "Rejeeks " + to_string(numberOfRetweets) + LINE_BREAK;
+    return tweetContentString;
 }
 
-void Tweet::printBriefly() {
-    cout << TweetId << " " << involvedUser->getDisplayName() << endl;
-    cout << text << endl;
-}
-
-void Tweet::addComment(string text, string involvedUserDisplayName) {
-    string commentId = TweetId + "." + to_string(comments.size());
-    Comment *newComment = new Comment(text, commentId, involvedUserDisplayName);
-    comments.push_back(newComment);
-}
-
-bool Tweet::hasThisComment(string commentId) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->getCommentId() == commentId) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void Tweet::printThisComment(string commentId) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->getCommentId() == commentId) {
-            comments[i]->print();
-        }
-    }
-}
-
-void Tweet::addThisReply(string replyText, string commentId, string involvedUserDisplayName) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->getCommentId() == commentId) {
-            string replyId = comments[i]->getCommentId() + "." + to_string(comments.size() - 1);
-            comments[i]->addThisReply(replyText, involvedUserDisplayName, comments[i]);
-            return;
-        }
-    }
-}
-
-void Tweet::printThisReply(string replyId) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->hasThisReply(replyId)) {
-            comments[i]->printThisReply(replyId);
-            return;
-        }
-    }
-}
-
-void Tweet::addThisReplyToReply(string replyText, string replyId, string involvedUserDisplayName) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->hasThisReply(replyId)) {
-            comments[i]->addThisReplyToReply(replyId, replyText, involvedUserDisplayName);
-        }
-    }
-}
-
-bool Tweet::CommentsHaveThisReply(string replyId) {
-    for (int i = 0; i < comments.size(); ++i) {
-        if (comments[i]->hasThisReply(replyId)) {
-            return true;
-        }
-    }
-    return false;
+pair<string, string> Tweet::getTweetIdVsSummaryStringPair() {
+    pair<string, string> summaryOfTweetString;
+    summaryOfTweetString.first = tweetId;
+    summaryOfTweetString.second += (tweetId + " " + involvedUser->getDisplayName() + LINE_BREAK);
+    summaryOfTweetString.second += (text + LINE_BREAK);
+    return summaryOfTweetString;
 }
 
 void Tweet::like(string likerUsername) {
@@ -105,6 +46,7 @@ void Tweet::like(string likerUsername) {
         }
     }
     likers.push_back(likerUsername);
+    cerr << "number of likers" << likers.size() << endl;
 }
 
 void Tweet::dislike(string dislikerUsername) {
@@ -114,10 +56,9 @@ void Tweet::dislike(string dislikerUsername) {
             return;
         }
     }
-   throw UserDidNotLikeTweet();
 }
 
-User *Tweet::getInvolvedUser() const {
+User *Tweet::getInvolvedUser() {
     return involvedUser;
 }
 
@@ -132,13 +73,5 @@ bool Tweet::hasThisTag(string tagText) {
         }
     }
     return false;
-}
-
-string Tweet::getThisCommentsUser(const string &commentId) {
-    for (int i = 0; i <comments.size() ; ++i) {
-        if(comments[i]->getCommentId() == commentId){
-            return comments[i]->getInvolvedUserDisplayName();
-        }
-    }
 }
 

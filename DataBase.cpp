@@ -1,4 +1,5 @@
 
+
 #include "DataBase.h"
 
 string DataBase::getMatchedUserProfile(string username, string password) {
@@ -11,9 +12,6 @@ string DataBase::getMatchedUserProfile(string username, string password) {
 }
 
 void DataBase::signUp(string username, string password) {
-    if (username.empty() || password.empty()) {
-        throw InvalidInputException();
-    }
     for (int i = 0; i < data.size(); ++i) {
         if (data[i].first == username) {
             throw UsernameAlreadyExists();

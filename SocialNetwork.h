@@ -1,4 +1,4 @@
-
+#include "Interface.h"
 #include "utils.h"
 #include <string>
 #include <vector>
@@ -10,77 +10,65 @@
 #include <algorithm>
 #include <cstdlib>
 #include <sstream>
+#include <memory>
 #include <iostream>
 
 #ifndef FINALPROJECT_SOCIALNETWORK_H
 #define FINALPROJECT_SOCIALNETWORK_H
 
+
 using namespace std;
 
 class SocialNetwork {
 private:
-    DataBase *dataBase;
-    vector<User*> users;
+    unique_ptr<DataBase> dataBase;
+    vector<User *> users;
     vector<Tweet *> tweets;
     User *currentUser;
 
 public:
     SocialNetwork() {
-        dataBase = new DataBase();
-        currentUser = NULL;
+        unique_ptr<DataBase> _dataBase(new DataBase());
+        dataBase = move(_dataBase);
+        currentUser = nullptr;
     }
 
-    virtual ~SocialNetwork();
+    //~SocialNetwork();
 
     void signUp(string username, string displayName, string password);
 
     void login(string username, string password);
 
-    void sendNotifToUsers(EventType eventType, Tweet *involvedTweet, vector<User *> toBeNotifiedUsers);
-
-    void sendNotifToUsers(EventType eventType, string commentId, vector<User *> toBeNotifiedUsers);
-
     void tweet(string text, vector<string> newTagStrings, vector<string> mentionStrings);
 
-    void showTweet(const string &tweetId);
+    string showTweet(const string &tweetId);
 
-    void showUserTweets(const string &username);
+    vector<pair<string, string> > showUserTweets(const string &username);
 
-    void showComment(const string &commentId);
-
-    void replyTheComment(const string &commentId, const string &replyText);
-
-    void like(const string &tweetId);
+    void like(string tweetId);
 
     void dislike(string tweetId);
 
-    void replyTheReply(string replyId, string replyText);
+    vector<pair<string, string> > searchForTags(string tagText);
 
-    void searchForTags(const string &tagText);
+    void retweet(string tweetId);
 
-    void comment(const string &tweetId, const string &text);
-
-    void showNotifications();
-
-    void showReply(string replyId);
-
-    void follow(const string &toBeFollowedUser);
-
-    void unfollow(const string &toBeUnfollowedUser);
-
-    void retweet(const string &tweetId);
+    string getCurrentUserDisplayName() const;
 
     void logOut();
 
     int getIndexOfDesiredUser(const string &username);
-
-    int getIndexByDisplayName(const string & displayName);
 
     int getIndexOfDesiredTweet(const string &tweetId);
 
     string determineTweetId();
 
     inline bool userIsLoggedIn() const;
+
+    void addSomePreparedTweet(const string &username, const string &password);
+
+    void login(const string &toBeLoggedInUser);
+
 };
 
 

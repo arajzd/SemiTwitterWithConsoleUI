@@ -8,17 +8,18 @@
 class Retweet : public Tweet {
 
 public:
-    Retweet(const string &tweetId, const Tweet &newRetweet, User *_involvedUser) : Tweet(newRetweet) {
+    Retweet(const string &_tweetId, Tweet _newRetweet, User *_involvedUser) : Tweet(_newRetweet) {
         involvedUser = _involvedUser;
-        TweetId = tweetId;
+        tweetId = _tweetId;
         numberOfRetweets = 0;
         likers.clear();
     }
-    void printTweet();
 
-    void printBriefly();
+    string getTweetContentString() override;
 
-    vector<User*> getMentrionedUsers(){ return mentionedUsers;}
+    pair<string, string> getTweetIdVsSummaryStringPair() override;
+
+    vector<User *> getMentrionedUsers() { return mentionedUsers; }
 };
 
 

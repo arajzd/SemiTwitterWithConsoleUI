@@ -3,12 +3,28 @@
 #include "Retweet.h"
 
 void SocialNetwork::signUp(string username, string displayName, string password) {
+    if (username.empty() || displayName.empty() || password.empty()) {
+        throw InvalidInputException();
+    }
     dataBase->signUp(username, password);
     User *newUser = new User(username, displayName);
     users.push_back(newUser);
+    /// here is the code for adding tweets;
+    addSomePreparedTweet(username, password);
+}
+
+void SocialNetwork::addSomePreparedTweet(const string &username, const string &password) {
+    login(username, password);
+    for (int i = 0; i < 3; ++i) {
+        tweet("hello" + to_string(i), vector<string>(1, (to_string(i) + "thTweet")), vector<string>(1, "a"));
+    }
+    logOut();
 }
 
 void SocialNetwork::login(string username, string password) {
+    if (username.empty() || password.empty()) {
+        throw InvalidInputException();
+    }
     string toBeLoggedInUser = dataBase->getMatchedUserProfile(username, password);
     int userIndex = getIndexOfDesiredUser(toBeLoggedInUser);
     if (userIndex != INVALID_INDEX) {
@@ -16,6 +32,10 @@ void SocialNetwork::login(string username, string password) {
     } else {
         throw InvalidInputException();
     }
+}
+
+void SocialNetwork::logOut() {
+    currentUser = nullptr;
 }
 
 string SocialNetwork::determineTweetId() {
@@ -45,34 +65,20 @@ void SocialNetwork::tweet(string text, vector<string> newTagStrings, vector<stri
         }
         tweets.push_back(newTweet);
         currentUser->addTweet(newTweet);
-        sendNotifToUsers(MENTION, newTweet, mentionedUsersAddress);
-        sendNotifToUsers(TWEET, newTweet, currentUser->getFollowers());
     } else {
         throw UserNotLoggedIn();
     }
 
 }
 
-void SocialNetwork::logOut() {
-    if (userIsLoggedIn()) {
-        currentUser = NULL;
-    } else {
-        throw UserNotLoggedIn();
-    }
 
-}
-
-void SocialNetwork::sendNotifToUsers(EventType eventType, Tweet *involvedTweet, vector<User *> toBeNotifiedUsers) {
-    for (int i = 0; i < toBeNotifiedUsers.size(); ++i) {
-        toBeNotifiedUsers[i]->addEvent(eventType, currentUser, involvedTweet);
-    }
-}
-
-void SocialNetwork::showTweet(const string &tweetId) {
+string SocialNetwork::showTweet(const string &tweetId) {
     int tweetIndex = getIndexOfDesiredTweet(tweetId);
+    string tweetString;
     if (tweetIndex != INVALID_INDEX) {
-        tweets[tweetIndex]->printTweet();
+        tweetString = tweets[tweetIndex]->getTweetContentString();
     }
+    return tweetString;
 }
 
 int SocialNetwork::getIndexOfDesiredUser(const string &username) {
@@ -93,163 +99,78 @@ int SocialNetwork::getIndexOfDesiredTweet(const string &tweetId) {
     return INVALID_INDEX;
 }
 
-void SocialNetwork::showUserTweets(const string &username) {
+vector<pair<string, string> > SocialNetwork::showUserTweets(const string &username) {
+    vector<pair<string, string> > userTweets;
     int userIndex = getIndexOfDesiredUser(username);
-    users[userIndex]->printListOfTweets();
+    if (userIndex != INVALID_INDEX) {
+        if (!(users[userIndex]->getPairOfTweetIdVsTweetsString().empty())) {
+            userTweets = users[userIndex]->getPairOfTweetIdVsTweetsString();
+            //todo think ?!?
+        }
+    }
+    return userTweets;
 }
 
-void SocialNetwork::searchForTags(const string &tagText) {
+vector<pair<string, string> > SocialNetwork::searchForTags(string tagText) {
+    vector<pair<string, string> > tweetsWithThisTag;
     for (int i = 0; i < tweets.size(); ++i) {
         if (tweets[i]->hasThisTag(tagText)) {
-            tweets[i]->printBriefly();
-            cout << endl;
+            tweetsWithThisTag.push_back(make_pair(tweets[i]->getTweetIdVsSummaryStringPair().first,
+                                                  tweets[i]->getTweetIdVsSummaryStringPair().second + LINE_BREAK));
         }
     }
-
+    return tweetsWithThisTag;
 }
 
-void SocialNetwork::comment(const string &tweetId, const string &text) {
-    if (userIsLoggedIn()) {
-        int tweetIndex = getIndexOfDesiredTweet(tweetId);
-        vector<User *> mentionedUsers;
-        mentionedUsers.push_back(tweets[tweetIndex]->getInvolvedUser());
-        tweets[tweetIndex]->addComment(text, currentUser->getDisplayName());
-        sendNotifToUsers(COMMENT, tweets[tweetIndex], mentionedUsers);
-    } else {
-        throw UserNotLoggedIn();
-    }
-}
-
-void SocialNetwork::showComment(const string &commentId) {
-    for (int i = 0; i < tweets.size(); ++i) {
-        if (tweets[i]->hasThisComment(commentId)) {
-            tweets[i]->printThisComment(commentId);
-        }
-    }
-}
-
-void SocialNetwork::replyTheComment(const string &commentId, const string &replyText) {
-    if (userIsLoggedIn()) {
-        for (int i = 0; i < tweets.size(); ++i) {
-            if (tweets[i]->hasThisComment(commentId)) {
-                tweets[i]->addThisReply(replyText, commentId, currentUser->getDisplayName());
-                string commenterDisplayName = tweets[i]->getThisCommentsUser(commentId);
-                int indexOfCommenter = getIndexByDisplayName(commenterDisplayName);
-                vector<User *> toBeNotifiedUser(1, users[indexOfCommenter]);
-                sendNotifToUsers(REPLY, commentId, toBeNotifiedUser);
-            }
-        }
-    } else {
-        throw UserNotLoggedIn();
-    }
-}
-
-void SocialNetwork::showReply(string replyId) {
-    for (int i = 0; i < tweets.size(); ++i) {
-        tweets[i]->printThisReply(replyId);
-    }
-}
-
-void SocialNetwork::replyTheReply(string replyId, string replyText) {
-    if (userIsLoggedIn()) {
-        for (int i = 0; i < tweets.size(); ++i) {
-            if (tweets[i]->CommentsHaveThisReply(replyId)) {
-                tweets[i]->addThisReplyToReply(replyText, replyId, currentUser->getDisplayName());
-            }
-        }
-    } else {
-        throw UserNotLoggedIn();
-    }
-}
-
-void SocialNetwork::like(const string &tweetId) {
+void SocialNetwork::like(string tweetId) {
     if (userIsLoggedIn()) {
         int tweetIndex = getIndexOfDesiredTweet(tweetId);
         tweets[tweetIndex]->like(currentUser->getUsername());
-        vector<User *> toBeNotifiedUsers(1, tweets[tweetIndex]->getInvolvedUser());
-        sendNotifToUsers(LIKE, tweets[tweetIndex], toBeNotifiedUsers);
     } else {
         throw UserNotLoggedIn();
     }
 }
 
-bool SocialNetwork::userIsLoggedIn() const { return currentUser != NULL; }
+bool SocialNetwork::userIsLoggedIn() const { return currentUser != nullptr; }
 
 void SocialNetwork::dislike(string tweetId) {
     if (userIsLoggedIn()) {
         int tweetIndex = getIndexOfDesiredTweet(tweetId);
         tweets[tweetIndex]->dislike(currentUser->getUsername());
-        vector<User *> toBeNotifiedUsers(1, tweets[tweetIndex]->getInvolvedUser());
-        sendNotifToUsers(DISLIKE, tweets[tweetIndex], toBeNotifiedUsers);
-    } else {
-        throw UserNotLoggedIn();
     }
 }
 
-void SocialNetwork::follow(const string &toBeFollowedUser) {
-    if (userIsLoggedIn()) {
-        int userIndex = getIndexOfDesiredUser(toBeFollowedUser);
-        users[userIndex]->addFollower(currentUser);
-    } else {
-        throw UserNotLoggedIn();
-    }
-}
-
-void SocialNetwork::unfollow(const string &toBeUnfollowedUser) {
-    if (userIsLoggedIn()) {
-        int userIndex = getIndexOfDesiredUser(toBeUnfollowedUser);
-        users[userIndex]->deleteFollower(currentUser);
-    } else {
-        throw UserNotLoggedIn();
-    }
-
-}
-
-void SocialNetwork::showNotifications() {
-    if (userIsLoggedIn()) {
-        currentUser->showNotifications();
-    }
-}
-
-void SocialNetwork::retweet(const string &tweetId) {
+void SocialNetwork::retweet(string tweetId) {
     if (userIsLoggedIn()) {
         string retweetId = determineTweetId();
         int tweetIndex = getIndexOfDesiredTweet(tweetId);
         tweets[tweetIndex]->addRetweet();
-        Retweet *newRetweet = new Retweet(retweetId, *tweets[tweetIndex], currentUser);
-        vector<User *> toBeMentionedUserRetweet(1, tweets[tweetIndex]->getInvolvedUser());
+        auto newRetweet = new Retweet(retweetId, *tweets[tweetIndex], currentUser);
         tweets.push_back(newRetweet);
         currentUser->addTweet(newRetweet);
-        sendNotifToUsers(MENTION, newRetweet, newRetweet->getMentrionedUsers());
-        sendNotifToUsers(TWEET, newRetweet, currentUser->getFollowers());
-        sendNotifToUsers(RETWEET, newRetweet, toBeMentionedUserRetweet);
     } else {
         throw UserNotLoggedIn();
     }
 }
 
+string SocialNetwork::getCurrentUserDisplayName() const {
+    return currentUser->getDisplayName();
+}
+
+void SocialNetwork::login(const string &toBeLoggedInUser) {
+    int userIndex = getIndexOfDesiredUser(toBeLoggedInUser);
+    if (userIndex != INVALID_INDEX) {
+        currentUser = users[userIndex];
+    }
+}
+/*
 SocialNetwork::~SocialNetwork() {
-    for (int i = 0; i < tweets.size(); ++i) {
-        delete tweets[i];
+    for (auto &user : users) {
+        delete user;
     }
-    for (int j = 0; j < users.size(); ++j) {
-        delete users[j];
+    for (auto &tweet : tweets) {
+        delete tweet;
     }
+
 }
-
-int SocialNetwork::getIndexByDisplayName(const string &displayName) {
-    for (int i = 0; i < users.size(); ++i) {
-        if (users[i]->getDisplayName() == displayName) {
-            return i;
-        }
-    }
-    return INVALID_INDEX;
-}
-
-void SocialNetwork::sendNotifToUsers(EventType eventType, string commentId, vector<User *> toBeNotifiedUsers) {
-    for (int i = 0; i < toBeNotifiedUsers.size(); ++i) {
-        toBeNotifiedUsers[i]->addEvent(eventType, currentUser, commentId);
-    }
-}
-
-
+*/

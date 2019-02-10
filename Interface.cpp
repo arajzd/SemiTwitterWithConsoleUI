@@ -1,227 +1,152 @@
+#include "SocialNetwork.h"
 
-#include "Interface.h"
 
-
-void Interface::signUp() {
-    string username, displayName, password;
-    cin >> username >> displayName >> password;
+void Interface::signUp(const string &username, const string &displayName, const string &password) {
     socialNetwork->signUp(username, displayName, password);
 }
 
-void Interface::login() {
-    string username, password;
-    cin >> username >> password;
+void Interface::login(const string &username, const string &password, const string &sessionId) {
+    sessionIdVsUsername[sessionId] = username;
     socialNetwork->login(username, password);
 }
-
 
 void Interface::logOut() {
     socialNetwork->logOut();
 }
 
-void Interface::tweet() {
+void Interface::tweet(string tweetString) {
     string input, text;
     vector<string> tags, mentions;
-    while (cin >> input) {
-        if (input == "text") {
-            text.clear();
-            cin.ignore(1);
-            getline(cin, text);
-            cin.clear();
-            if (text.size() > MAX_WORD_LIMIT) {
-                throw TextExceedsMaxWordLimit();
+    auto inputVector = Interface::parseInput(tweetString);
+    for (int i = 0; i < inputVector.size(); i++) {
+        if (inputVector[i] == "text") {
+            while ((inputVector[i + 1] != "tag") || (inputVector[i + 1] != "mention")) {
+                text += inputVector[i + 1];
+                i++;
+                if (text.size() > MAX_WORD_LIMIT) {
+                    throw TextExceedsMaxWordLimit();
+                }
             }
-        } else if (input == "tag") {
-            cin >> input;
-            tags.push_back(input);
+        } else if (inputVector[i] == "tag") {
+            tags.push_back(inputVector[i + 1]);
         } else if (input == "mention") {
-            cin >> input;
-            mentions.push_back(input);
-        } else if (input == "abort") {
-            return;
-        } else if (input == "publish") {
-            break;
+            mentions.push_back(inputVector[i + 1]);
         }
     }
     socialNetwork->tweet(text, tags, mentions);
 }
 
-void Interface::showTweet() {
-    string tweetId;
-    cin >> tweetId;
-    socialNetwork->showTweet(tweetId);
+void Interface::like(const string &tweetId, const string &sessionId) {
+    if (isSessionIdValid(sessionId)) {
+        login(sessionIdVsUsername[sessionId]);
+        socialNetwork->like(tweetId);
+        logOut();
+    }
 }
 
-void Interface::showUserTweets() {
-    string username;
-    cin >> username;
-    socialNetwork->showUserTweets(username);
+void Interface::dislike(const string &tweetId, const string &sessionId) {
+    if (isSessionIdValid(sessionId)) {
+        login(sessionIdVsUsername[sessionId]);
+        socialNetwork->dislike(tweetId);
+        logOut();
+    }
 }
 
-void Interface::searchForTags() {
-    string tagText;
-    cin >> tagText;
-    socialNetwork->searchForTags(tagText);
+void Interface::retweet(const string &toBeRetweetedId, const string &sessionId) {
+    if (isSessionIdValid(sessionId)) {
+        login(sessionIdVsUsername[sessionId]);
+        socialNetwork->retweet(toBeRetweetedId);
+        logOut();
+    }
 }
 
-void Interface::comment() {
-    string tweetId, commentText;
-    cin >> tweetId;
-    cin.ignore(1);
-    getline(cin, commentText);
-    socialNetwork->comment(tweetId, commentText);
-}
-
-void Interface::showComment() {
-    string commentId;
-    cin >> commentId;
-    socialNetwork->showComment(commentId);
-}
-
-void Interface::replyTheComment(string commentId) {
-    string replyText;
-    cin.ignore(1);
-    getline(cin, replyText);
-    socialNetwork->replyTheComment(commentId, replyText);
-}
-
-void Interface::showReply() {
-    string replyId;
-    cin >> replyId;
-    socialNetwork->showReply(replyId);
-}
-
-void Interface::replyTheReply(string replyId) {
-    string replyText;
-    cin.ignore(1);
-    getline(cin, replyText);
-    socialNetwork->replyTheReply(replyId, replyText);
-}
-
-void Interface::like() {
-    string likedTweetId;
-    cin >> likedTweetId;
-    socialNetwork->like(likedTweetId);
-}
-
-void Interface::dislike() {
-    string dislikedTweetId;
-    cin >> dislikedTweetId;
-    socialNetwork->dislike(dislikedTweetId);
-}
-
-void Interface::follow() {
-    string toBeFollowedUser;
-    cin >> toBeFollowedUser;
-    socialNetwork->follow(toBeFollowedUser);
-}
-
-void Interface::unfollow() {
-    string toBeFollowedUser;
-    cin >> toBeFollowedUser;
-    socialNetwork->unfollow(toBeFollowedUser);
-}
-
-void Interface::showNotifications() {
-    socialNetwork->showNotifications();
-}
-
-void Interface::retweet() {
-    string toBeRetweetedId;
-    cin >> toBeRetweetedId;
-    socialNetwork->retweet(toBeRetweetedId);
-}
-
-void Interface::getInput() {
-    string choice;
-    while (cin >> choice) {
-        try {
-            if (choice == "signup") {
-                signUp();
-                cerr << "signed up" << endl;
-            } else if (choice == "login") {
-                login();
-                cerr << "logged in " << endl;
-            } else if (choice == "logout") {
-                logOut();
-                cerr << "logged out " << endl;
-            } else if (choice == "jeek") {
-                tweet();
-                cerr << "tweeted !" << endl;
-            } else if (choice == "showJeek") {
-                showTweet();
-            } else if (choice == "search") {
-                cin.ignore();
-                char inputChar = (char) getchar();
-                if (inputChar == '@') {
-                    showUserTweets();
-                } else if (inputChar == '#') {
-                    searchForTags();
-                }
-                cerr << "search complete !" << endl;
-            } else if (choice == "comment") {
-                comment();
-                cerr << "commented!" << endl;
-            } else if (choice == "reply") {
-                string toBeRepliedId;
-                cin >> toBeRepliedId;
-                string idType = isReplyIdOrCommentId(toBeRepliedId);
-                if (idType == "commentId") {
-                    replyTheComment(toBeRepliedId);
-                } else if (idType == "replyId") {
-                    replyTheReply(toBeRepliedId);
-                }
-                cerr << "replied!" << endl;
-            } else if (choice == "showComment") {
-                showComment();
-                cerr << "comment shown" << endl;
-            } else if (choice == "rejeek") {
-                retweet();
-                cerr << "retweeted!" << endl;
-            } else if (choice == "showReply") {
-                showReply();
-                cerr << "reply shown!" << endl;
-            } else if (choice == "like") {
-                like();
-                cerr << "liked!" << endl;
-            } else if (choice == "dislike") {
-                dislike();
-                cerr << "disliked!" << endl;
-            } else if (choice == "follow") {
-                follow();
-                cerr << "followed!" << endl;
-            } else if (choice == "unfollow") {
-                unfollow();
-                cerr << "unfollowed!" << endl;
-            } else if (choice == "notifications") {
-                showNotifications();
-                cerr << "notifications shown!" << endl;
-            } else {
-                throw InvalidInputException();
-            }
-            cin.clear();
-        } catch (...) {
-            cin.clear();
-            continue;
+string Interface::showHomeHTML(const string &sessionId, HomePageType homePageType, const string &searchString) {
+    auto currentUser = sessionIdVsUsername[sessionId];
+    string userTweetsHTML;
+    cerr << 1 << endl;
+    if (isSessionIdValid(sessionId)) {
+        login(currentUser);
+        vector<pair<string, string> > relatedTweets;
+        userTweetsHTML += getHomeDefaultPage();
+        if (homePageType == DEFAULT) {
+            relatedTweets = socialNetwork->showUserTweets(currentUser);
+        } else if (homePageType == SEARCH_TAGS) {
+            relatedTweets = socialNetwork->searchForTags(searchString);
+        } else if (homePageType == SEARCH_USERS) {
+            relatedTweets = socialNetwork->showUserTweets(searchString);
         }
+        cerr << 2 << endl;
+        cerr << " size of related tweets" << relatedTweets.size() << endl;
+        for (int i = 0; i < relatedTweets.size(); ++i) {
+            userTweetsHTML += relatedTweets[relatedTweets.size() - i - 1].second;
+            userTweetsHTML += "<a href=\"/tweetDetails?tweetId=" +
+                              relatedTweets[relatedTweets.size() - i - 1].first +
+                              "\">MORE DETAILS</a>" + LINE_BREAK + LINE_BREAK;
+        }
+        userTweetsHTML += "</div>\n</body>\n</html>";
+        cerr << 3 << endl;
+        logOut();
     }
+    cerr << endl;
+    return userTweetsHTML;
 }
 
+string Interface::showJeekDetails(const string &sessionId, const string &tweetId) {
+    string tweetDetails;
+    if (isSessionIdValid(sessionId)) {
+        login(sessionIdVsUsername[sessionId]);
+        tweetDetails += "<!DOCTYPE html>\n"
+                "<html>\n"
+                "<body>";
+        tweetDetails += "Hi " + socialNetwork->getCurrentUserDisplayName() + "!" LINE_BREAK;
+        tweetDetails += "<a href=\"/logout\">LOGOUT</a>" LINE_BREAK;
+        tweetDetails += socialNetwork->showTweet(tweetId);
+        tweetDetails += LINE_BREAK
+                                "<a href=\"/like?tweetId=" + tweetId + "\">LIKE</a>\n"
+                                LINE_BREAK
+                                "<a href=\"/dislike?tweetId=" + tweetId + "\">DISLIKE</a>\n"
+                                LINE_BREAK
+                                "<a href=\"/retweet?tweetId=" + tweetId + "\">RETWEET</a>\n";
+        tweetDetails += "</body>"
+                "</html>";
+        logOut();
+    }
+    return tweetDetails;
+}
 
-string Interface::isReplyIdOrCommentId(string Id) {
-    int count = 0;
-    std::size_t found = Id.find('.');
-    while (found != std::string::npos) {
-        found++;
-        found = Id.find('.', found);
-        count++;
-    }
-    if (count == 1) {
-        return "commentId";
-    } else if (count > 1) {
-        return "replyId";
-    } else {
-        throw InvalidInputException();
-    }
+vector<string> Interface::parseInput(const string &inputString) {
+    istringstream iss(inputString);
+    vector<string> input_vector;
+    copy(istream_iterator<string>(iss),
+         istream_iterator<string>(),
+         back_inserter(input_vector));
+    return input_vector;
+}
+
+string Interface::getHomeDefaultPage() {
+    return ("<!DOCTYPE html>\n"
+                    "<html>\n"
+                    "<body style=\"text-align: center;\">\n"
+                    "Hi " + socialNetwork->getCurrentUserDisplayName() + "!"
+                    "<div align=\"right\">\n"
+                    "    <a href=\"/logout\">LOG OUT</a>\n"
+                    "</div>\n"
+
+                    "<div style=\"padding-left:16px\" align=\"center\">\n"
+                    "    <form action=\"/search\" method=\"get\">\n"
+                    "        <input type=\"text\" placeholder=\"Search...\" name=\"searchString\">\n"
+                    "        <button type=\"submit\">Search</button>\n"
+                    "    </form>\n"
+                    "</div>\n"
+                    "<div align=\"left\">\n");
+}
+
+void Interface::login(const string &username) {
+    socialNetwork->login(username);
+}
+
+Interface::Interface() {
+    unique_ptr<SocialNetwork> _socialNetwork(new SocialNetwork());
+    socialNetwork = move(_socialNetwork);
 }
 
